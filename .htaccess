@@ -1,0 +1,5 @@
+# config.phpへの直接アクセスを禁止
+<Files "config.php">
+    Order Allow,Deny
+    Deny from all
+</Files>
