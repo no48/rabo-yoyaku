@@ -62,7 +62,7 @@ button:hover { background: #1d4ed8; }
 <div class="hint">
 表示された画面で <strong>「PDFとして保存 / 印刷」ボタン</strong> または <kbd>Cmd</kbd>+<kbd>P</kbd>（Windowsは <kbd>Ctrl</kbd>+<kbd>P</kbd>）でPDFとして保存できます。<br>
 ※ 注文番号とメールアドレスが一致しない場合、領収書は表示されません。<br>
-※ 領収書は何度でも発行できますが、2回目以降は「再発行」と表示されます。
+※ 領収書は何度でも発行できます。二重計上を避けるためお客様ご自身でご注意ください。
 </div>
 </body>
 </html>

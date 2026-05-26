@@ -4,12 +4,6 @@
     Deny from all
 </Files>
 
-# 発行ログ（領収書）への直接アクセス禁止
-<Files "receipt_log.json">
-    Order Allow,Deny
-    Deny from all
-</Files>
-
 # URL リライト: /receipt → receipt.php, /receipt/view → receipt_view.php
 RewriteEngine On
 RewriteRule ^receipt/?$ receipt.php [L]

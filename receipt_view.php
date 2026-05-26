@@ -53,26 +53,6 @@ function fetch_order_by_name($order_name) {
     return $orders[0] ?? null;
 }
 
-// ============ 発行ログ（ファイル簡易永続化） ============
-function bump_issue_count($order_name) {
-    // /var/www/html 直下に書ける前提（Docker Apache の www-data 所有）。
-    // Render 再起動でリセットされる可能性あり（要永続化なら Render Disk か外部DB）。
-    $log_file = __DIR__ . '/receipt_log.json';
-    $log = [];
-    if (file_exists($log_file)) {
-        $raw = file_get_contents($log_file);
-        if ($raw !== false) {
-            $log = json_decode($raw, true) ?: [];
-        }
-    }
-    $entry = $log[$order_name] ?? ['count' => 0, 'last_issued' => null];
-    $entry['count'] += 1;
-    $entry['last_issued'] = date('c');
-    $log[$order_name] = $entry;
-    @file_put_contents($log_file, json_encode($log, JSON_UNESCAPED_UNICODE), LOCK_EX);
-    return $entry;
-}
-
 // ============ 入力検証 ============
 $order_num = trim(ltrim((string)($_GET['order'] ?? ''), '#'));
 $req_email = strtolower(trim((string)($_GET['email'] ?? '')));
@@ -96,13 +76,28 @@ if ($order_email === '' || $order_email !== $req_email) {
     redirect_with_error($order_num, 'メールアドレスがご注文時のものと一致しません。');
 }
 
-// ============ 発行ログ更新 ============
-$entry = bump_issue_count($order['name']);
-$count = $entry['count'];
-$now_iso = $entry['last_issued'];
-$is_reissue = $count > 1;
+// ============ 支払い状態の確認（未払いは領収書を出さない） ============
+// financial_status: pending / authorized / partially_paid / paid / partially_refunded / refunded / voided
+$financial_status = (string)($order['financial_status'] ?? '');
+if (!empty($order['cancelled_at'])) {
+    redirect_with_error($order_num, 'このご注文はキャンセルされているため、領収書を発行できません。');
+}
+if ($financial_status !== 'paid') {
+    $status_label_map = [
+        'pending' => 'お支払い保留中',
+        'authorized' => '与信のみ（未決済）',
+        'partially_paid' => '一部入金済（未完了）',
+        'partially_refunded' => '一部返金済',
+        'refunded' => '返金済',
+        'voided' => '無効化済',
+    ];
+    $label = $status_label_map[$financial_status] ?? '未払い';
+    redirect_with_error($order_num, "このご注文は「{$label}」のため領収書を発行できません。お支払い完了後に再度お試しください。");
+}
 
-error_log("[receipt] issued {$order['name']} count=$count to=$req_email");
+// ============ 発行記録（ログのみ・保存はしない） ============
+$now_iso = date('c');
+error_log("[receipt] issued {$order['name']} to=$req_email");
 
 // ============ 領収書データ組み立て ============
 $addr = $order['billing_address'] ?? ($order['shipping_address'] ?? []);
@@ -184,8 +179,8 @@ table.items td.num { text-align:right; }
 .totals .row { display:flex; justify-content:space-between; padding:4px 8px; }
 .totals .row.grand { border-top:1px solid #111; border-bottom:1px solid #111; font-weight:700; font-size:11pt; padding:8px; margin-top:6px; }
 .stamp { display:inline-block; margin-left:8px; padding:6px 12px; border:2px solid #c00; color:#c00; font-weight:700; transform:rotate(-6deg); border-radius:50%; }
-.reissue-badge { position:absolute; top:24mm; right:18mm; padding:8px 16px; border:3px solid #c00; color:#c00; font-weight:700; font-size:14pt; transform:rotate(-12deg); border-radius:4px; letter-spacing:2px; }
-.footer-note { margin-top:32px; font-size:9pt; color:#555; line-height:1.8; border-top:1px solid #ccc; padding-top:12px; }
+.notice-box { margin-top:24px; padding:10px 14px; background:#fff8e1; border-left:4px solid #f59e0b; font-size:9pt; color:#5b4500; line-height:1.7; }
+.footer-note { margin-top:16px; font-size:9pt; color:#555; line-height:1.8; border-top:1px solid #ccc; padding-top:12px; }
 .print-bar { position:sticky; top:0; background:#1f2937; color:white; padding:10px 14px; margin-bottom:16px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
 .print-bar a, .print-bar button { background:white; color:#1f2937; border:0; padding:6px 14px; border-radius:4px; cursor:pointer; font-size:0.9rem; font-weight:600; text-decoration:none; }
 .print-bar a { background:#6b7280; color:white; }
@@ -209,9 +204,6 @@ table.items td.num { text-align:right; }
     </div>
 </div>
 <div class="sheet">
-    <?php if ($is_reissue): ?>
-    <div class="reissue-badge">再発行</div>
-    <?php endif; ?>
     <div class="head"><h1>領収書</h1></div>
     <div class="meta">
         <div class="to-block">
@@ -271,9 +263,12 @@ table.items td.num { text-align:right; }
         <?php endif; ?>
         <div class="row grand"><span>合計（税込）</span><span>¥ <?= yen($total) ?></span></div>
     </div>
+    <div class="notice-box">
+        <strong>ご注意：</strong>本領収書は同じ注文番号から何度でも発行できます。<br>
+        二重計上による経理上のトラブルを避けるため、お客様ご自身で保管・管理にご注意ください。
+    </div>
     <div class="footer-note">
-        ※ 本書は Shopify 注文 <?= h($order['name']) ?> に基づき発行しています。<br>
-        発行回数: <?= h($count) ?>　/　最新発行日: <?= h(format_date_jp($now_iso)) ?>
+        ※ 本書は Shopify 注文 <?= h($order['name']) ?> に基づき発行しています。
     </div>
 </div>
 </body>
