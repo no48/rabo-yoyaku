@@ -214,8 +214,6 @@ foreach ($order['tax_lines'] ?? [] as $t) {
     ];
 }
 
-$paid_stamp = ($order['financial_status'] ?? '') === 'paid';
-
 // 会社情報
 $COMPANY = [
     'brand' => 'ロープアクセスラボ',
@@ -255,7 +253,6 @@ table.items td.num { text-align:right; }
 .totals { width:280px; margin-left:auto; font-size:9.5pt; margin-top:12px; }
 .totals .row { display:flex; justify-content:space-between; padding:4px 8px; }
 .totals .row.grand { border-top:1px solid #111; border-bottom:1px solid #111; font-weight:700; font-size:11pt; padding:8px; margin-top:6px; }
-.stamp { display:inline-block; margin-left:8px; padding:6px 12px; border:2px solid #c00; color:#c00; font-weight:700; transform:rotate(-6deg); border-radius:50%; }
 .notice-box { margin-top:24px; padding:10px 14px; background:#fff8e1; border-left:4px solid #f59e0b; font-size:9pt; color:#5b4500; line-height:1.7; }
 .footer-note { margin-top:16px; font-size:9pt; color:#555; line-height:1.8; border-top:1px solid #ccc; padding-top:12px; }
 .print-bar { position:sticky; top:0; background:#1f2937; color:white; padding:10px 14px; margin-bottom:16px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
@@ -304,9 +301,6 @@ table.items td.num { text-align:right; }
     </div>
     <div class="note-line">
         但し　<span class="note-text" contenteditable="true" spellcheck="false"><?= h($note_input) ?></span>　として
-        <?php if ($paid_stamp): ?>
-        <span class="stamp">領収済</span>
-        <?php endif; ?>
     </div>
     <p style="font-size:9.5pt;">上記正に領収いたしました。</p>
     <h3 style="font-size:11pt; border-bottom:1px solid #888; padding-bottom:4px; margin-top:24px;">明細</h3>
