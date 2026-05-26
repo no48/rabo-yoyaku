@@ -80,24 +80,36 @@ if ($order_email === '' || $order_email !== $req_email) {
     redirect_with_error($order_num, 'メールアドレスがご注文時のものと一致しません。');
 }
 
-// ============ 支払い状態の確認（未払いは領収書を出さない） ============
-// financial_status: pending / authorized / partially_paid / paid / partially_refunded / refunded / voided
+// ============ 支払い状態の確認 ============
+// 発行可能: paid（支払完了）/ partially_refunded（一部返金済→実支払額で発行）
+// 拒否:    pending / authorized / partially_paid / refunded / voided / cancelled
 $financial_status = (string)($order['financial_status'] ?? '');
 if (!empty($order['cancelled_at'])) {
     redirect_with_error($order_num, 'このご注文はキャンセルされているため、領収書を発行できません。');
 }
-if ($financial_status !== 'paid') {
+$allowed_statuses = ['paid', 'partially_refunded'];
+if (!in_array($financial_status, $allowed_statuses, true)) {
     $status_label_map = [
         'pending' => 'お支払い保留中',
         'authorized' => '与信のみ（未決済）',
         'partially_paid' => '一部入金済（未完了）',
-        'partially_refunded' => '一部返金済',
-        'refunded' => '返金済',
+        'refunded' => '全額返金済',
         'voided' => '無効化済',
     ];
     $label = $status_label_map[$financial_status] ?? '未払い';
     redirect_with_error($order_num, "このご注文は「{$label}」のため領収書を発行できません。お支払い完了後に再度お試しください。");
 }
+
+// ============ 返金額の集計（partially_refunded の場合に実支払額を計算） ============
+$total_refund = 0.0;
+foreach ($order['refunds'] ?? [] as $r) {
+    foreach ($r['transactions'] ?? [] as $t) {
+        if (($t['kind'] ?? '') === 'refund' && ($t['status'] ?? '') === 'success') {
+            $total_refund += (float)($t['amount'] ?? 0);
+        }
+    }
+}
+$is_partial_refund = $financial_status === 'partially_refunded' && $total_refund > 0;
 
 // ============ 発行記録（ログのみ・保存はしない） ============
 $now_iso = date('c');
@@ -118,6 +130,9 @@ foreach ($order['shipping_lines'] ?? [] as $s) {
     $shipping += (float)($s['price'] ?? 0);
 }
 $tax_excluded = $total - $total_tax;
+
+// 返金後の実支払額（部分返金の場合のみ調整）
+$real_paid = $total - $total_refund;
 
 $items = [];
 foreach ($order['line_items'] ?? [] as $li) {
@@ -227,7 +242,7 @@ table.items td.num { text-align:right; }
     </div>
     <div class="amount-box">
         <div class="label">金額</div>
-        <div class="yen">¥ <?= yen($total) ?> <span style="font-size:10pt; font-weight:normal; margin-left:8px;">（税込）</span></div>
+        <div class="yen">¥ <?= yen($real_paid) ?> <span style="font-size:10pt; font-weight:normal; margin-left:8px;">（税込<?= $is_partial_refund ? '・返金後の実支払額' : '' ?>）</span></div>
     </div>
     <div class="note-line">
         但し　<span class="note-text" contenteditable="true" spellcheck="false"><?= h($note_input) ?></span>　として
@@ -265,11 +280,19 @@ table.items td.num { text-align:right; }
         <?php if ($shipping > 0): ?>
         <div class="row"><span>送料</span><span>¥ <?= yen($shipping) ?></span></div>
         <?php endif; ?>
-        <div class="row grand"><span>合計（税込）</span><span>¥ <?= yen($total) ?></span></div>
+        <div class="row"><span>注文時合計</span><span>¥ <?= yen($total) ?></span></div>
+        <?php if ($is_partial_refund): ?>
+        <div class="row" style="color:#c00;"><span>返金</span><span>- ¥ <?= yen($total_refund) ?></span></div>
+        <?php endif; ?>
+        <div class="row grand"><span><?= $is_partial_refund ? '実支払額（税込）' : '合計（税込）' ?></span><span>¥ <?= yen($real_paid) ?></span></div>
     </div>
     <div class="notice-box">
         <strong>ご注意：</strong>本領収書は同じ注文番号から何度でも発行できます。<br>
         二重計上による経理上のトラブルを避けるため、お客様ご自身で保管・管理にご注意ください。
+        <?php if ($is_partial_refund): ?>
+        <br><br>
+        <strong>※ 一部返金処理について：</strong>本領収書は ¥<?= yen($total_refund) ?> の返金処理を反映した実支払額（¥<?= yen($real_paid) ?>）で発行しています。
+        <?php endif; ?>
     </div>
     <div class="footer-note">
         ※ 本書は Shopify 注文 <?= h($order['name']) ?> に基づき発行しています。
