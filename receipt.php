@@ -28,6 +28,8 @@ h1 { font-size: 1.4rem; margin-bottom: 8px; }
 .lead { color: #555; font-size: 0.95rem; margin-bottom: 24px; }
 form { display: grid; gap: 14px; padding: 24px; border: 1px solid #ddd; border-radius: 8px; background: #fafafa; }
 label { display: grid; gap: 4px; font-size: 0.9rem; font-weight: 600; }
+.field-hint { font-weight: normal; color: #6b7280; font-size: 0.82rem; margin-top: 2px; line-height: 1.5; }
+.field-hint .ex { color: #4b5563; }
 input { padding: 10px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; }
 input:focus { outline: 2px solid #2563eb; outline-offset: -1px; border-color: #2563eb; }
 button { padding: 12px 16px; background: #2563eb; color: white; border: 0; border-radius: 4px; cursor: pointer; font-size: 1rem; font-weight: 600; }
@@ -45,23 +47,30 @@ button:hover { background: #1d4ed8; }
 <div class="error"><?= h($error) ?></div>
 <?php endif; ?>
 <form method="get" action="/receipt/view">
-    <label>注文番号（先頭の # は不要）
-        <input type="text" name="order" required placeholder="例: 1056" value="<?= h($order) ?>" autocomplete="off">
+    <label>◆ 注文番号
+        <input type="text" name="order" required placeholder="1056" value="<?= h($order) ?>" autocomplete="off">
+        <div class="field-hint">注文確認メール記載の数字のみ入力してください。<br>
+        <span class="ex">例：<strong>#1056</strong> → <strong>1056</strong></span></div>
     </label>
-    <label>ご注文時のメールアドレス
+    <label>◆ ご注文時に使用したメールアドレス
         <input type="email" name="email" required placeholder="example@example.com" value="<?= h($email) ?>">
+        <div class="field-hint">※ 異なるメールアドレスでは表示できません。</div>
     </label>
-    <label>宛名（空欄ならご注文者名で発行されます）
-        <input type="text" name="to" placeholder="例: 株式会社○○ 御中 / 上様">
-    </label>
-    <label>但し書き <span style="font-weight: normal; color: #555;">（末尾の「として」は自動で付くため入力不要）</span>
-        <input type="text" name="note" value="お品代" placeholder="例: お品代 / 講習料 / 受講料 / 諸経費">
-        <small style="color:#6b7280; font-weight:normal; margin-top:4px;">領収書には「但し <strong>入力した内容</strong> として」と自動表示されます。</small>
+    <label>◆ 宛名（領収書のお名前）
+        <input type="text" name="to" placeholder="例: 株式会社○○ 御中">
+        <div class="field-hint">
+        <span class="ex">例：<br>
+        　株式会社○○ 御中<br>
+        　山田太郎 様</span><br>
+        ※ 敬称（様 / 御中）もご自身でご入力ください。<br>
+        ※ 空欄の場合はご注文者名で発行されます。
+        </div>
     </label>
     <button type="submit">領収書を表示</button>
 </form>
 <div class="hint">
 表示された画面で <strong>「PDFとして保存 / 印刷」ボタン</strong> または <kbd>Cmd</kbd>+<kbd>P</kbd>（Windowsは <kbd>Ctrl</kbd>+<kbd>P</kbd>）でPDFとして保存できます。<br>
+※ 但し書きは注文内容に応じて自動で「ご注文商品代」または「受講料」が入ります。変更したい場合は表示後の画面で直接クリックして編集できます。<br>
 ※ 注文番号とメールアドレスが一致しない場合、領収書は表示されません。<br>
 ※ 領収書は何度でも発行できます。二重計上を避けるためお客様ご自身でご注意ください。
 </div>

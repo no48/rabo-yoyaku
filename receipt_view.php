@@ -57,14 +57,52 @@ function fetch_order_by_name($order_name) {
     return $orders[0] ?? null;
 }
 
+// ============ Shopify API: 商品IDリストから tags を取得 ============
+function fetch_products_tags($product_ids) {
+    $product_ids = array_values(array_unique(array_filter($product_ids)));
+    if (empty($product_ids)) return [];
+    $url = 'https://' . SHOPIFY_SHOP . '/admin/api/2024-01/products.json?'
+        . http_build_query(['ids' => implode(',', $product_ids), 'fields' => 'id,tags', 'limit' => 250]);
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'X-Shopify-Access-Token: ' . SHOPIFY_ACCESS_TOKEN,
+    ]);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+    $body = curl_exec($ch);
+    curl_close($ch);
+    if ($body === false) return [];
+    $data = json_decode($body, true);
+    $out = [];
+    foreach (($data['products'] ?? []) as $p) {
+        $tags = array_map('trim', explode(',', $p['tags'] ?? ''));
+        $out[(int)$p['id']] = $tags;
+    }
+    return $out;
+}
+
+/**
+ * 注文の line_items に「講習」タグの商品が含まれているか判定
+ * → 含まれていれば 'receive_training' タイプの注文として扱う
+ */
+function detect_order_type($order) {
+    $product_ids = array_filter(array_map(fn($li) => $li['product_id'] ?? null, $order['line_items'] ?? []));
+    if (empty($product_ids)) return 'product'; // 不明時は物販扱い
+    $tags_by_id = fetch_products_tags($product_ids);
+    foreach ($tags_by_id as $pid => $tags) {
+        if (in_array('講習', $tags, true)) return 'training';
+    }
+    return 'product';
+}
+
 // ============ 入力検証 ============
 $order_num = trim(ltrim((string)($_GET['order'] ?? ''), '#'));
 $req_email = strtolower(trim((string)($_GET['email'] ?? '')));
 $to_name_input = trim((string)($_GET['to'] ?? ''));
-$note_input = trim((string)($_GET['note'] ?? ''));
-// 末尾の「として」「と して」「として　」などを取り除く（重複防止の保険）
-$note_input = preg_replace('/[\s　]*として[\s　]*$/u', '', $note_input);
-$note_input = $note_input !== '' ? $note_input : 'お品代';
+$note_input_raw = trim((string)($_GET['note'] ?? ''));
+// 末尾の「として」を取り除く（重複防止の保険）
+$note_input_raw = preg_replace('/[\s　]*として[\s　]*$/u', '', $note_input_raw);
 
 if ($order_num === '' || $req_email === '') {
     redirect_with_error($order_num, '注文番号とメールアドレスを入力してください');
@@ -103,6 +141,11 @@ if (!in_array($financial_status, $allowed_statuses, true)) {
     redirect_with_error($order_num, "このご注文は「{$label}」のため領収書を発行できません。お支払い完了後に再度お試しください。");
 }
 
+// ============ 注文タイプ判定（講習 / 物販）→ 但し書きのデフォルト ============
+$order_type = detect_order_type($order); // 'training' or 'product'
+$default_note = $order_type === 'training' ? '受講料' : 'ご注文商品代';
+$note_input = $note_input_raw !== '' ? $note_input_raw : $default_note;
+
 // ============ 返金額の集計（partially_refunded の場合に実支払額を計算） ============
 $total_refund = 0.0;
 foreach ($order['refunds'] ?? [] as $r) {
@@ -120,9 +163,21 @@ error_log("[receipt] issued {$order['name']} to=$req_email");
 
 // ============ 領収書データ組み立て ============
 $addr = $order['billing_address'] ?? ($order['shipping_address'] ?? []);
-$display_to = $to_name_input !== ''
-    ? $to_name_input
-    : (trim(($addr['company'] ?? '') ?: (($addr['last_name'] ?? '') . ' ' . ($addr['first_name'] ?? ''))) ?: '上様');
+if ($to_name_input !== '') {
+    // お客様入力は敬称（様/御中）も含めて入力する前提なので、そのまま使う
+    $display_to = $to_name_input;
+} else {
+    // 注文者名で自動補完。会社名があれば「○○ 御中」、個人名は「姓 名 様」
+    $company = trim((string)($addr['company'] ?? ''));
+    $person = trim(((string)($addr['last_name'] ?? '')) . ' ' . ((string)($addr['first_name'] ?? '')));
+    if ($company !== '') {
+        $display_to = $company . ' 御中';
+    } elseif ($person !== '') {
+        $display_to = $person . ' 様';
+    } else {
+        $display_to = '上様';
+    }
+}
 
 $total = (float)($order['total_price'] ?? 0);
 $total_tax = (float)($order['total_tax'] ?? 0);
@@ -229,7 +284,7 @@ table.items td.num { text-align:right; }
     <div class="head"><h1>領収書</h1></div>
     <div class="meta">
         <div class="to-block">
-            <div class="to-name" contenteditable="true" spellcheck="false"><?= h($display_to) ?> 様</div>
+            <div class="to-name" contenteditable="true" spellcheck="false"><?= h($display_to) ?></div>
             <div class="to-addr" contenteditable="true" spellcheck="false">〒<?= h($addr['zip'] ?? '') ?> <?= h(trim(($addr['address1'] ?? '') . ' ' . ($addr['address2'] ?? ''))) ?></div>
         </div>
         <div class="from-block">
