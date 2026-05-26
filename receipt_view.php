@@ -83,16 +83,24 @@ function fetch_products_tags($product_ids) {
 }
 
 /**
- * 注文の line_items に「講習」タグの商品が含まれているか判定
- * → 含まれていれば 'receive_training' タイプの注文として扱う
+ * 注文の line_items を見て、講習/物販/混在 を判定
+ * 'training' = 講習のみ / 'product' = 物販のみ / 'mixed' = 講習+物販の同時購入
  */
 function detect_order_type($order) {
     $product_ids = array_filter(array_map(fn($li) => $li['product_id'] ?? null, $order['line_items'] ?? []));
     if (empty($product_ids)) return 'product'; // 不明時は物販扱い
     $tags_by_id = fetch_products_tags($product_ids);
-    foreach ($tags_by_id as $pid => $tags) {
-        if (in_array('講習', $tags, true)) return 'training';
+    $has_training = false;
+    $has_product = false;
+    foreach ($tags_by_id as $tags) {
+        if (in_array('講習', $tags, true)) {
+            $has_training = true;
+        } else {
+            $has_product = true;
+        }
     }
+    if ($has_training && $has_product) return 'mixed';
+    if ($has_training) return 'training';
     return 'product';
 }
 
@@ -141,9 +149,13 @@ if (!in_array($financial_status, $allowed_statuses, true)) {
     redirect_with_error($order_num, "このご注文は「{$label}」のため領収書を発行できません。お支払い完了後に再度お試しください。");
 }
 
-// ============ 注文タイプ判定（講習 / 物販）→ 但し書きのデフォルト ============
-$order_type = detect_order_type($order); // 'training' or 'product'
-$default_note = $order_type === 'training' ? '受講料' : 'ご注文商品代';
+// ============ 注文タイプ判定（講習 / 物販 / 混在）→ 但し書きのデフォルト ============
+$order_type = detect_order_type($order); // 'training' / 'product' / 'mixed'
+$default_note = match ($order_type) {
+    'training' => '受講料',
+    'mixed'    => '受講料および商品代',
+    default    => 'ご注文商品代',
+};
 $note_input = $note_input_raw !== '' ? $note_input_raw : $default_note;
 
 // ============ 返金額の集計（partially_refunded の場合に実支払額を計算） ============
