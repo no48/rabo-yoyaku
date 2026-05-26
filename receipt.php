@@ -54,8 +54,9 @@ button:hover { background: #1d4ed8; }
     <label>宛名（空欄ならご注文者名で発行されます）
         <input type="text" name="to" placeholder="例: 株式会社○○ 御中 / 上様">
     </label>
-    <label>但し書き
-        <input type="text" name="note" value="お品代として">
+    <label>但し書き <span style="font-weight: normal; color: #555;">（末尾の「として」は自動で付くため入力不要）</span>
+        <input type="text" name="note" value="お品代" placeholder="例: お品代 / 講習料 / 受講料 / 諸経費">
+        <small style="color:#6b7280; font-weight:normal; margin-top:4px;">領収書には「但し <strong>入力した内容</strong> として」と自動表示されます。</small>
     </label>
     <button type="submit">領収書を表示</button>
 </form>

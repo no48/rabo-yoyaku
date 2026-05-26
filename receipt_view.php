@@ -61,7 +61,10 @@ function fetch_order_by_name($order_name) {
 $order_num = trim(ltrim((string)($_GET['order'] ?? ''), '#'));
 $req_email = strtolower(trim((string)($_GET['email'] ?? '')));
 $to_name_input = trim((string)($_GET['to'] ?? ''));
-$note_input = trim((string)($_GET['note'] ?? '')) ?: 'お品代として';
+$note_input = trim((string)($_GET['note'] ?? ''));
+// 末尾の「として」「と して」「として　」などを取り除く（重複防止の保険）
+$note_input = preg_replace('/[\s　]*として[\s　]*$/u', '', $note_input);
+$note_input = $note_input !== '' ? $note_input : 'お品代';
 
 if ($order_num === '' || $req_email === '') {
     redirect_with_error($order_num, '注文番号とメールアドレスを入力してください');
