@@ -1,0 +1,20 @@
+# config.php への直接アクセス禁止
+<Files "config.php">
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+# 共通ライブラリへの直接アクセス禁止
+<Files "lib_shopify.php">
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+# URL リライト
+#   /list/        → list/index.php (Apache の DirectoryIndex で自動)
+#   /list/month   → list/month.php
+#   /list/export  → list/export.php
+RewriteEngine On
+RewriteBase /list/
+RewriteRule ^month/?$ month.php [L,QSA]
+RewriteRule ^export/?$ export.php [L,QSA]
