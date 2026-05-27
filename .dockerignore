@@ -1,0 +1,16 @@
+.git
+.gitignore
+.DS_Store
+.idea
+.vscode
+*.log
+*.md
+node_modules
+
+# composer の依存はビルド時に install するのでローカルの vendor/ は持ち込まない
+/vendor
+
+# 実行時生成ファイル
+**/invoice_counter.json
+**/quote_counter.json
+**/receipt_log.json

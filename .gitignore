@@ -2,3 +2,12 @@
 *.log
 .idea/
 .vscode/
+
+# composer
+/vendor/
+composer.lock
+
+# 採番カウンタ等の実行時データ (コンテナ内のみ存在)
+**/invoice_counter.json
+**/quote_counter.json
+**/receipt_log.json

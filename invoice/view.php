@@ -143,7 +143,26 @@ table.items td.num { text-align:right; }
     .print-bar { display:none; }
     [contenteditable="true"] { background:transparent !important; outline:none !important; }
     .from-block .stamp-area { border:none; color:transparent; }
+    .modal-bg { display:none !important; }
 }
+
+/* メール送信モーダル */
+.modal-bg { position:fixed; inset:0; background:rgba(0,0,0,0.5); display:none; align-items:center; justify-content:center; z-index:100; }
+.modal-bg.shown { display:flex; }
+.modal { background:white; max-width:560px; width:92%; max-height:90vh; overflow-y:auto; padding:20px 24px; border-radius:8px; box-shadow:0 8px 32px rgba(0,0,0,0.2); }
+.modal h2 { margin:0 0 12px; font-size:1.15rem; }
+.modal label { display:grid; gap:4px; font-size:0.85rem; font-weight:600; margin-bottom:12px; }
+.modal input[type=email], .modal input[type=text], .modal textarea { padding:8px 10px; border:1px solid #ccc; border-radius:4px; font-size:0.92rem; font-family:inherit; }
+.modal textarea { min-height:180px; resize:vertical; }
+.modal .modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:16px; }
+.modal .modal-actions button { padding:8px 16px; border:0; border-radius:4px; cursor:pointer; font-size:0.92rem; font-weight:600; }
+.modal .btn-cancel { background:#e5e7eb; color:#374151; }
+.modal .btn-send { background:#2563eb; color:white; }
+.modal .btn-send:disabled { background:#9ca3af; cursor:not-allowed; }
+.modal .alert { padding:10px 12px; border-radius:4px; margin-top:12px; font-size:0.9rem; display:none; }
+.modal .alert.error { background:#fee2e2; color:#991b1b; display:block; }
+.modal .alert.success { background:#d1fae5; color:#065f46; display:block; }
+.modal .hint { font-size:0.8rem; color:#6b7280; font-weight:normal; margin-top:2px; }
 </style>
 </head>
 <body>
@@ -152,6 +171,7 @@ table.items td.num { text-align:right; }
     <span>請求書 <?= h($invoice_no) ?> | 注文 <?= h($order['name']) ?> | <strong>黄色枠はクリックで編集可</strong> | Cmd+P で PDF</span>
     <div style="display:flex; gap:8px;">
         <a href="/list/">← 一覧に戻る</a>
+        <button onclick="openMailModal()" style="background:#059669; color:white;">📧 メールで送信</button>
         <button class="primary" onclick="window.print()">PDFとして保存 / 印刷</button>
     </div>
 </div>
@@ -254,6 +274,117 @@ table.items td.num { text-align:right; }
         ※ ご不明な点がございましたら、上記担当までお問い合わせください。
     </div>
 </div>
+
+<!-- メール送信モーダル -->
+<div class="modal-bg" id="mailModal" onclick="if(event.target===this) closeMailModal()">
+    <div class="modal">
+        <h2>📧 請求書をメールで送信</h2>
+        <p style="font-size:0.85rem; color:#6b7280; margin:0 0 12px;">画面上で編集中の内容で PDF を生成・添付して送信します。</p>
+
+        <label>送信先メールアドレス <span style="color:#dc2626;">*</span>
+            <input type="email" id="m_recipient" required placeholder="client@example.com">
+        </label>
+
+        <label>CC (任意、カンマ区切りで複数可)
+            <input type="text" id="m_cc" placeholder="staff@example.com, manager@example.com">
+        </label>
+
+        <label>メール件名
+            <input type="text" id="m_subject" value="">
+            <span class="hint">空欄なら「【ロープアクセスラボ】ご請求書のお送り (<?= h($invoice_no) ?>)」</span>
+        </label>
+
+        <label>メール本文
+            <textarea id="m_body" placeholder="空欄ならデフォルトテンプレートで送信されます"></textarea>
+            <span class="hint">空欄ならテンプレ（宛名・請求番号・金額・支払期限・担当が自動で入る挨拶文）で送信</span>
+        </label>
+
+        <div id="m_alert" class="alert"></div>
+
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeMailModal()">キャンセル</button>
+            <button class="btn-send" id="m_send_btn" onclick="sendMail()">送信</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// 請求書のコンテキスト (画面上の編集内容を読み取って送信)
+const ORDER_NUM = <?= json_encode($order_num) ?>;
+
+function $val(sel) { return (document.querySelector(sel)?.innerText || '').trim(); }
+function getCtx() {
+    return {
+        order:      ORDER_NUM,
+        invoice_no: $val('.head .doc-no span[contenteditable]'),
+        to_name:    $val('.to-name'),
+        subject:    $val('.subject span[contenteditable]'),
+        issue_date: $val('.dates span:nth-of-type(1)[contenteditable], .dates div:nth-of-type(1) span[contenteditable]') ||
+                    $val('.dates span[contenteditable]:nth-of-type(1)'),
+        pay_due:    document.querySelectorAll('.dates span[contenteditable]')[1]?.innerText.trim() || '',
+        note:       $val('.note-text'),
+        staff:      $val('.staff span[contenteditable]')
+    };
+}
+
+function openMailModal() {
+    document.getElementById('m_alert').className = 'alert';
+    document.getElementById('m_alert').textContent = '';
+    document.getElementById('m_send_btn').disabled = false;
+    document.getElementById('m_send_btn').textContent = '送信';
+    document.getElementById('mailModal').classList.add('shown');
+    setTimeout(() => document.getElementById('m_recipient').focus(), 50);
+}
+
+function closeMailModal() {
+    document.getElementById('mailModal').classList.remove('shown');
+}
+
+async function sendMail() {
+    const recipient = document.getElementById('m_recipient').value.trim();
+    if (!recipient) {
+        showAlert('送信先メールアドレスを入力してください', 'error');
+        return;
+    }
+    const btn = document.getElementById('m_send_btn');
+    btn.disabled = true;
+    btn.textContent = '送信中...';
+    showAlert('', '');
+
+    const ctx = getCtx();
+    const fd = new FormData();
+    Object.entries(ctx).forEach(([k, v]) => fd.set(k, v));
+    fd.set('recipient', recipient);
+    fd.set('cc', document.getElementById('m_cc').value.trim());
+    fd.set('mail_subject', document.getElementById('m_subject').value.trim());
+    fd.set('mail_body', document.getElementById('m_body').value);
+    // 金額は表示テキストから取り出すと丸めで違う可能性があるので、サーバー側で再計算する設計
+    fd.set('total_real', '');
+
+    try {
+        const res = await fetch('/invoice/send.php', { method: 'POST', body: fd, credentials: 'same-origin' });
+        const data = await res.json();
+        if (data.ok) {
+            showAlert(`✅ ${recipient} に送信しました`, 'success');
+            btn.textContent = '送信済';
+        } else {
+            showAlert('❌ ' + (data.error || '不明なエラー'), 'error');
+            btn.disabled = false;
+            btn.textContent = '送信';
+        }
+    } catch (e) {
+        showAlert('❌ 通信エラー: ' + e.message, 'error');
+        btn.disabled = false;
+        btn.textContent = '送信';
+    }
+}
+
+function showAlert(text, type) {
+    const el = document.getElementById('m_alert');
+    el.textContent = text;
+    el.className = 'alert' + (type ? ' ' + type : '');
+}
+</script>
 
 </body>
 </html>
