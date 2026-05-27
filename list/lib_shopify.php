@@ -120,12 +120,30 @@ function order_row($o) {
         }
     }
     $total = (int)round((float)($o['total_price'] ?? 0));
+
+    // 商品名リスト（"商品名 / バリアント ×数量" を配列で返す。テーブルでは改行表示）
+    $item_names = [];
+    foreach (($o['line_items'] ?? []) as $li) {
+        $title = trim((string)($li['title'] ?? ''));
+        $variant = trim((string)($li['variant_title'] ?? ''));
+        $qty = (int)($li['quantity'] ?? 1);
+        $label = $title;
+        if ($variant !== '' && $variant !== 'Default Title') {
+            $label .= ' / ' . $variant;
+        }
+        if ($qty > 1) {
+            $label .= ' ×' . $qty;
+        }
+        $item_names[] = $label;
+    }
+
     return [
         'order_name' => $o['name'] ?? '',
         'created_at' => substr($o['created_at'] ?? '', 0, 10),
         'customer' => $name ?: '-',
         'email' => $o['email'] ?? '',
         'items' => count($o['line_items'] ?? []),
+        'items_list' => $item_names,
         'total' => $total,
         'tax' => (int)round((float)($o['total_tax'] ?? 0)),
         'refund' => $refund,

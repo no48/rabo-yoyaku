@@ -68,10 +68,12 @@ h1 { font-size: 1.4rem; margin-bottom: 4px; }
 .summary .item { flex: 1; }
 .summary .label { font-size: 0.8rem; color: #6b7280; }
 .summary .value { font-size: 1.3rem; font-weight: 700; }
-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-th, td { padding: 8px 10px; border-bottom: 1px solid #e5e7eb; text-align: left; vertical-align: top; }
-th { background: #f9fafb; font-size: 0.8rem; color: #374151; }
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid #e5e7eb; border-radius: 6px; }
+table { width: 100%; min-width: 1180px; border-collapse: collapse; font-size: 0.9rem; }
+th, td { padding: 8px 10px; border-bottom: 1px solid #e5e7eb; text-align: left; vertical-align: top; white-space: nowrap; }
+th { background: #f9fafb; font-size: 0.8rem; color: #374151; position: sticky; top: 0; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.products { white-space: pre-line; line-height: 1.5; font-size: 0.85rem; min-width: 240px; max-width: 320px; }
 tr.cancelled { background: #fef3c7; color: #92400e; }
 tr.refunded td { color: #b45309; }
 .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
@@ -134,6 +136,7 @@ tr.removed { display: none; }
     <button type="button" class="btn-reset" onclick="resetRows()">全て表示に戻す</button>
 </div>
 
+<div class="table-wrap">
 <table id="orders-table">
     <thead>
         <tr>
@@ -143,6 +146,7 @@ tr.removed { display: none; }
             <th>お客様名</th>
             <th>メール</th>
             <th class="num">明細数</th>
+            <th>商品名</th>
             <th class="num">税込合計</th>
             <th class="num">返金</th>
             <th class="num">実売上</th>
@@ -162,6 +166,7 @@ tr.removed { display: none; }
             <td><?= h($r['customer']) ?></td>
             <td><?= h($r['email']) ?></td>
             <td class="num"><?= yen($r['items']) ?></td>
+            <td class="products"><?= h(implode("\n", $r['items_list'])) ?></td>
             <td class="num">¥ <?= yen($r['total']) ?></td>
             <td class="num"><?= $r['refund'] > 0 ? '¥ ' . yen($r['refund']) : '-' ?></td>
             <td class="num">¥ <?= yen($r['net']) ?></td>
@@ -175,10 +180,11 @@ tr.removed { display: none; }
         </tr>
     <?php endforeach; ?>
     <?php if (empty($rows)): ?>
-        <tr><td colspan="10" class="muted" style="text-align:center;"><?= h($ym) ?> の注文はありません</td></tr>
+        <tr><td colspan="11" class="muted" style="text-align:center;"><?= h($ym) ?> の注文はありません</td></tr>
     <?php endif; ?>
     </tbody>
 </table>
+</div>
 
 <p class="muted" style="margin-top: 24px;">
     ※ 「税込合計」は注文時の合計、「実売上」は返金額を差し引いた金額。<br>
