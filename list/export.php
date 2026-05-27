@@ -72,7 +72,8 @@ $to_iso = $end->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s\Z');
 $orders = fetch_orders_in_range($from_iso, $to_iso);
 
 output_csv("orders_{$ym}.csv", function ($fh) use ($orders) {
-    fputcsv($fh, ['注文番号', '注文日', 'お客様名', 'メール', '明細数', '税込合計', 'うち消費税', '返金', '実売上', '支払状態', '取消']);
+    // 列: A注文番号 B注文日 C名前 Dメール E明細数 F商品名 G税込合計 Hうち消費税 I返金 J実売上 K支払状態 L取消
+    fputcsv($fh, ['注文番号', '注文日', 'お客様名', 'メール', '明細数', '商品名', '税込合計', 'うち消費税', '返金', '実売上', '支払状態', '取消']);
     // 注文日 昇順
     usort($orders, fn($a, $b) => strcmp($a['created_at'] ?? '', $b['created_at'] ?? ''));
     $data_start_row = 2;
@@ -84,6 +85,7 @@ output_csv("orders_{$ym}.csv", function ($fh) use ($orders) {
             $r['customer'],
             $r['email'],
             $r['items'],
+            implode("\n", $r['items_list']), // Excel で開くとセル内改行で複数商品が並ぶ
             $r['total'],
             $r['tax'],
             $r['refund'],
@@ -94,24 +96,23 @@ output_csv("orders_{$ym}.csv", function ($fh) use ($orders) {
     }
     $data_end_row = $data_start_row + count($orders) - 1;
     if (count($orders) > 0) {
-        // 空行を1行入れて見やすく
-        fputcsv($fh, ['']);
+        fputcsv($fh, ['']); // 空行
         // 合計行1: 全件合計（キャンセル含む）
         fputcsv($fh, [
-            '合計（全件）', '', '', '', '',
-            "=SUM(F{$data_start_row}:F{$data_end_row})",
+            '合計（全件）', '', '', '', '', '',
             "=SUM(G{$data_start_row}:G{$data_end_row})",
             "=SUM(H{$data_start_row}:H{$data_end_row})",
             "=SUM(I{$data_start_row}:I{$data_end_row})",
+            "=SUM(J{$data_start_row}:J{$data_end_row})",
             '', '',
         ]);
-        // 合計行2: キャンセル除外 (K列=取消が空のものだけ集計)
+        // 合計行2: キャンセル除外 (L列=取消が空のものだけ集計)
         fputcsv($fh, [
-            '合計（キャンセル除く）', '', '', '', '',
-            "=SUMIFS(F{$data_start_row}:F{$data_end_row},K{$data_start_row}:K{$data_end_row},\"\")",
-            "=SUMIFS(G{$data_start_row}:G{$data_end_row},K{$data_start_row}:K{$data_end_row},\"\")",
-            "=SUMIFS(H{$data_start_row}:H{$data_end_row},K{$data_start_row}:K{$data_end_row},\"\")",
-            "=SUMIFS(I{$data_start_row}:I{$data_end_row},K{$data_start_row}:K{$data_end_row},\"\")",
+            '合計（キャンセル除く）', '', '', '', '', '',
+            "=SUMIFS(G{$data_start_row}:G{$data_end_row},L{$data_start_row}:L{$data_end_row},\"\")",
+            "=SUMIFS(H{$data_start_row}:H{$data_end_row},L{$data_start_row}:L{$data_end_row},\"\")",
+            "=SUMIFS(I{$data_start_row}:I{$data_end_row},L{$data_start_row}:L{$data_end_row},\"\")",
+            "=SUMIFS(J{$data_start_row}:J{$data_end_row},L{$data_start_row}:L{$data_end_row},\"\")",
             '', '',
         ]);
     }
