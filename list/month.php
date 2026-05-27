@@ -69,13 +69,15 @@ h1 { font-size: 1.4rem; margin-bottom: 4px; }
 .summary .label { font-size: 0.8rem; color: #6b7280; }
 .summary .value { font-size: 1.3rem; font-weight: 700; }
 .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid #e5e7eb; border-radius: 6px; }
-table { width: 100%; min-width: 1180px; border-collapse: collapse; font-size: 0.9rem; }
+table { width: 100%; min-width: 1280px; border-collapse: collapse; font-size: 0.9rem; }
 th, td { padding: 8px 10px; border-bottom: 1px solid #e5e7eb; text-align: left; vertical-align: top; white-space: nowrap; }
 th { background: #f9fafb; font-size: 0.8rem; color: #374151; position: sticky; top: 0; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 td.products { line-height: 1.5; font-size: 0.85rem; min-width: 240px; max-width: 320px; white-space: normal; }
 td.products .product-item { padding: 4px 0; }
 td.products .product-item:not(:last-child) { border-bottom: 1px dashed #d1d5db; }
+.btn-invoice { display:inline-block; padding:4px 10px; background:#2563eb; color:white; text-decoration:none; border-radius:4px; font-size:0.78rem; font-weight:600; white-space:nowrap; }
+.btn-invoice:hover { background:#1d4ed8; }
 tr.cancelled { background: #fef3c7; color: #92400e; }
 tr.refunded td { color: #b45309; }
 .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
@@ -153,6 +155,7 @@ tr.removed { display: none; }
             <th class="num">返金</th>
             <th class="num">実売上</th>
             <th>支払状態</th>
+            <th>請求書</th>
         </tr>
     </thead>
     <tbody>
@@ -179,10 +182,17 @@ tr.removed { display: none; }
                     <span class="badge <?= h($r['financial_status']) ?>"><?= h(status_label($r['financial_status'])) ?></span>
                 <?php endif; ?>
             </td>
+            <td>
+                <?php if ($r['cancelled'] !== 'yes'): ?>
+                <a class="btn-invoice" href="/invoice/view?order=<?= h(ltrim($r['order_name'], '#')) ?>" target="_blank" rel="noopener">📄 請求書発行</a>
+                <?php else: ?>
+                <span class="muted" style="font-size:0.78rem;">—</span>
+                <?php endif; ?>
+            </td>
         </tr>
     <?php endforeach; ?>
     <?php if (empty($rows)): ?>
-        <tr><td colspan="11" class="muted" style="text-align:center;"><?= h($ym) ?> の注文はありません</td></tr>
+        <tr><td colspan="12" class="muted" style="text-align:center;"><?= h($ym) ?> の注文はありません</td></tr>
     <?php endif; ?>
     </tbody>
 </table>

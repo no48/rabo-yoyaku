@@ -1,0 +1,23 @@
+# config / lib / カウンタファイルへの直接アクセス禁止
+<Files "config.php">
+    Order Allow,Deny
+    Deny from all
+</Files>
+<Files "lib_shopify.php">
+    Order Allow,Deny
+    Deny from all
+</Files>
+<Files "lib_counter.php">
+    Order Allow,Deny
+    Deny from all
+</Files>
+<Files "invoice_counter.json">
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+# URL リライト
+#   /invoice/view  → view.php
+RewriteEngine On
+RewriteBase /invoice/
+RewriteRule ^view/?$ view.php [L,QSA]
