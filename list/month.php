@@ -73,7 +73,9 @@ table { width: 100%; min-width: 1180px; border-collapse: collapse; font-size: 0.
 th, td { padding: 8px 10px; border-bottom: 1px solid #e5e7eb; text-align: left; vertical-align: top; white-space: nowrap; }
 th { background: #f9fafb; font-size: 0.8rem; color: #374151; position: sticky; top: 0; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-td.products { white-space: pre-line; line-height: 1.5; font-size: 0.85rem; min-width: 240px; max-width: 320px; }
+td.products { line-height: 1.5; font-size: 0.85rem; min-width: 240px; max-width: 320px; white-space: normal; }
+td.products .product-item { padding: 4px 0; }
+td.products .product-item:not(:last-child) { border-bottom: 1px dashed #d1d5db; }
 tr.cancelled { background: #fef3c7; color: #92400e; }
 tr.refunded td { color: #b45309; }
 .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
@@ -166,7 +168,7 @@ tr.removed { display: none; }
             <td><?= h($r['customer']) ?></td>
             <td><?= h($r['email']) ?></td>
             <td class="num"><?= yen($r['items']) ?></td>
-            <td class="products"><?= h(implode("\n", $r['items_list'])) ?></td>
+            <td class="products"><?php foreach ($r['items_list'] as $__item): ?><div class="product-item"><?= h($__item) ?></div><?php endforeach; ?></td>
             <td class="num">¥ <?= yen($r['total']) ?></td>
             <td class="num"><?= $r['refund'] > 0 ? '¥ ' . yen($r['refund']) : '-' ?></td>
             <td class="num">¥ <?= yen($r['net']) ?></td>
