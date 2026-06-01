@@ -81,8 +81,15 @@ foreach ($order['tax_lines'] ?? [] as $t) {
     ];
 }
 
+// 送料（明細に1行として出すため合計を算出）
+$shipping_total = 0.0;
+foreach ($order['shipping_lines'] ?? [] as $sl) {
+    $shipping_total += (float)($sl['price'] ?? 0);
+}
+
 $today = date('c');
-$pay_due_default = date('Y-m-d', strtotime('+30 day'));
+// 支払期限＝注文日+7日（注意書き「ご注文日より7日以内」と整合）
+$pay_due_default = date('Y-m-d', strtotime(($order['created_at'] ?? 'now') . ' +7 day'));
 ?>
 <!doctype html>
 <html lang="ja">
@@ -240,6 +247,14 @@ table.items td.num { text-align:right; }
                 <td class="num">¥ <?= yen($it['subtotal']) ?></td>
             </tr>
         <?php endforeach; ?>
+        <?php if ($shipping_total > 0): ?>
+            <tr>
+                <td>送料</td>
+                <td class="num">1</td>
+                <td class="num">¥ <?= yen($shipping_total) ?></td>
+                <td class="num">¥ <?= yen($shipping_total) ?></td>
+            </tr>
+        <?php endif; ?>
         </tbody>
     </table>
 
@@ -259,7 +274,9 @@ table.items td.num { text-align:right; }
         <div><span class="label">お振込先</span></div>
         <div><?= h(BANK_INFO['bank']) ?> <?= h(BANK_INFO['branch']) ?>　<?= h(BANK_INFO['type']) ?>　<?= h(BANK_INFO['number']) ?></div>
         <div>口座名義：<?= h(BANK_INFO['name']) ?></div>
-        <div style="margin-top:4px; color:#7c5a00;">※ お振込手数料はお客様にてご負担をお願いいたします。</div>
+        <div style="margin-top:4px; color:#7c5a00;">※ お振込手数料はお客様のご負担となります。</div>
+        <div style="margin-top:2px; color:#7c5a00;">※ ご注文日より7日以内にお振込みください。</div>
+        <div style="margin-top:2px; color:#7c5a00;">※ ご入金確認後、商品の発送準備を開始いたします。</div>
     </div>
 
     <h3 class="section-title">備考</h3>
@@ -282,7 +299,8 @@ table.items td.num { text-align:right; }
         <p style="font-size:0.85rem; color:#6b7280; margin:0 0 12px;">画面上で編集中の内容で PDF を生成・添付して送信します。</p>
 
         <label>送信先メールアドレス <span style="color:#dc2626;">*</span>
-            <input type="email" id="m_recipient" required placeholder="client@example.com">
+            <input type="email" id="m_recipient" required placeholder="client@example.com" value="<?= h($order['email'] ?? '') ?>">
+            <span class="hint">注文のメールアドレスを自動入力しています（必要なら変更可）</span>
         </label>
 
         <label>CC (任意、カンマ区切りで複数可)
@@ -290,13 +308,13 @@ table.items td.num { text-align:right; }
         </label>
 
         <label>メール件名
-            <input type="text" id="m_subject" value="">
-            <span class="hint">空欄なら「【ロープアクセスラボ】ご請求書のお送り (<?= h($invoice_no) ?>)」</span>
+            <input type="text" id="m_subject" value="<?= h('【' . COMPANY_INFO['brand'] . '】ご請求書送付のご案内（' . $invoice_no . '）') ?>">
+            <span class="hint">自動入力しています（必要なら変更可）</span>
         </label>
 
         <label>メール本文
             <textarea id="m_body" placeholder="空欄ならデフォルトテンプレートで送信されます"></textarea>
-            <span class="hint">空欄ならテンプレ（宛名・請求番号・金額・支払期限・担当が自動で入る挨拶文）で送信</span>
+            <span class="hint">空欄なら自動テンプレ（宛名・請求番号・金額・支払期限・振込先・注意事項・担当を含む挨拶文）で送信</span>
         </label>
 
         <div id="m_alert" class="alert"></div>

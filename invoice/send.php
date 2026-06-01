@@ -142,7 +142,7 @@ try {
 
     $mailer->Subject = $mail_subject !== ''
         ? $mail_subject
-        : sprintf('【%s】ご請求書のお送り (%s)', $from_name, $invoice_no);
+        : sprintf('【%s】ご請求書送付のご案内（%s）', $from_name, $invoice_no);
 
     $mailer->Body = $mail_body !== '' ? $mail_body : default_mail_body($to_name, $invoice_no, $real_paid, $pay_due, $staff);
     $mailer->isHTML(false);
@@ -165,26 +165,35 @@ try {
 
 function default_mail_body($to_name, $invoice_no, $real_paid, $pay_due, $staff) {
     $amount = number_format((int)round((float)$real_paid));
+    $bank = sprintf('%s %s　%s %s', BANK_INFO['bank'], BANK_INFO['branch'], BANK_INFO['type'], BANK_INFO['number']);
     $lines = [];
     $lines[] = ($to_name !== '' ? $to_name : 'ご担当者') . ' 様';
     $lines[] = '';
     $lines[] = 'いつもお世話になっております。';
     $lines[] = 'ロープアクセスラボ（4U合同会社）でございます。';
     $lines[] = '';
-    $lines[] = '下記の通り、ご請求書を添付ファイルにてお送りいたします。';
-    $lines[] = 'ご確認のほどよろしくお願い申し上げます。';
+    $lines[] = '下記の通りご請求書を添付（PDF）にてお送りいたします。';
+    $lines[] = 'ご査収のほど、よろしくお願い申し上げます。';
     $lines[] = '';
-    $lines[] = '─────────────────';
-    $lines[] = '請求書番号：' . $invoice_no;
-    $lines[] = 'ご請求金額：¥ ' . $amount . '（税込）';
-    if ($pay_due !== '') $lines[] = 'お支払期限：' . $pay_due;
-    $lines[] = '─────────────────';
+    $lines[] = '──────────────';
+    $lines[] = '■ ご請求内容';
+    $lines[] = '　請求書番号：' . $invoice_no;
+    $lines[] = '　ご請求金額：¥' . $amount . '（税込）';
+    if ($pay_due !== '') $lines[] = '　お支払期限：' . $pay_due;
     $lines[] = '';
-    $lines[] = 'ご不明な点がございましたら、お気軽にお問い合わせください。';
-    $lines[] = 'よろしくお願いいたします。';
+    $lines[] = '■ お振込先';
+    $lines[] = '　' . $bank;
+    $lines[] = '　口座名義：' . BANK_INFO['name'];
+    $lines[] = '';
+    $lines[] = '※ ご注文日より7日以内にお振込みください。';
+    $lines[] = '※ お振込手数料はお客様のご負担となります。';
+    $lines[] = '※ ご入金確認後、商品の発送準備を開始いたします。';
+    $lines[] = '──────────────';
+    $lines[] = '';
+    $lines[] = 'ご不明な点がございましたらお気軽にお問い合わせください。';
+    $lines[] = '今後ともよろしくお願いいたします。';
     $lines[] = '';
     if ($staff !== '') {
-        $lines[] = '─────────────────';
         $lines[] = '担当：' . $staff;
     }
     $lines[] = 'ロープアクセスラボ（4U合同会社）';
@@ -214,6 +223,15 @@ function build_invoice_html_for_pdf($order, $ctx) {
         $items_html .= '<td class="num">¥ ' . $yen($unit) . '</td>';
         $items_html .= '<td class="num">¥ ' . $yen($subtotal) . '</td>';
         $items_html .= '</tr>';
+    }
+    // 送料を明細に1行で出す（合計が合うように）
+    $shipping_total = 0.0;
+    foreach ($order['shipping_lines'] ?? [] as $sl) {
+        $shipping_total += (float)($sl['price'] ?? 0);
+    }
+    if ($shipping_total > 0) {
+        $items_html .= '<tr><td>送料</td><td class="num">1</td><td class="num">¥ ' . $yen($shipping_total)
+            . '</td><td class="num">¥ ' . $yen($shipping_total) . '</td></tr>';
     }
 
     $tax_excluded = (float)$order['total_price'] - (float)$order['total_tax'];
@@ -352,7 +370,9 @@ table.items td.num { text-align: right; }
     <div><strong>お振込先</strong></div>
     <div>{$bank_lines}</div>
     <div>口座名義：{$e_bank_name}</div>
-    <div style="margin-top:2pt; color:#7c5a00;">※ お振込手数料はお客様にてご負担をお願いいたします。</div>
+    <div style="margin-top:2pt; color:#7c5a00;">※ お振込手数料はお客様のご負担となります。</div>
+    <div style="margin-top:2pt; color:#7c5a00;">※ ご注文日より7日以内にお振込みください。</div>
+    <div style="margin-top:2pt; color:#7c5a00;">※ ご入金確認後、商品の発送準備を開始いたします。</div>
 </div>
 
 <h3 class="section-title">備考</h3>
