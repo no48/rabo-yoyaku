@@ -131,7 +131,10 @@ try {
     $mailer->SMTPAuth   = true;
     $mailer->Username   = $smtp_user;
     $mailer->Password   = $smtp_pass;
-    $mailer->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+    $mailer->SMTPSecure = ($smtp_port === 465)
+        ? PHPMailer::ENCRYPTION_SMTPS
+        : PHPMailer::ENCRYPTION_STARTTLS;
+    $mailer->Timeout    = 15; // 接続が滞ったら15秒で打ち切り（送信中フリーズ防止）
     $mailer->CharSet    = 'UTF-8';
     $mailer->Encoding   = 'base64';
 
