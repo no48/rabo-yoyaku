@@ -1,0 +1,26 @@
+# config / lib / カウンタへの直接アクセス禁止
+<Files "config.php">
+    Order Allow,Deny
+    Deny from all
+</Files>
+<Files "lib_shopify.php">
+    Order Allow,Deny
+    Deny from all
+</Files>
+<Files "lib_counter.php">
+    Order Allow,Deny
+    Deny from all
+</Files>
+<Files "estimate_counter.json">
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+# URL リライト
+#   /estimate/          → index.php（DirectoryIndex）
+#   /estimate/products  → products.php（商品検索API）
+#   /estimate/send      → send.php（PDF生成+メール）
+RewriteEngine On
+RewriteBase /estimate/
+RewriteRule ^products/?$ products.php [L,QSA]
+RewriteRule ^send/?$ send.php [L,QSA]
