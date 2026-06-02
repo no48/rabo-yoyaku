@@ -1,0 +1,40 @@
+# rabo-yoyaku VPS デプロイ用 Docker Compose
+# 使い方は README.md 参照。
+#   git clone https://github.com/no48/rabo-yoyaku.git
+#   cd rabo-yoyaku/deploy
+#   cp .env.example .env   （値を編集）
+#   Caddyfile のドメインを自分のものに変更
+#   ./init-data.sh          （採番ファイルを用意）
+#   docker compose up -d --build
+
+services:
+  # アプリ本体（PHP 8.2 + Apache。リポジトリ直下の Dockerfile を使う）
+  app:
+    build:
+      context: ..
+    env_file: .env
+    restart: unless-stopped
+    expose:
+      - "80"
+    volumes:
+      # 採番ファイルを永続化（VPSの利点：再起動しても請求書/見積の番号が飛ばない）
+      - ./data/invoice_counter.json:/var/www/html/invoice/invoice_counter.json
+      - ./data/estimate_counter.json:/var/www/html/estimate/estimate_counter.json
+
+  # 自動HTTPS リバースプロキシ（Let's Encrypt を Caddy が自動取得）
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,17 @@
+# rabo-yoyaku 自動HTTPS リバースプロキシ設定
+#
+# 下の「invoice.rope-lab.jp」を、実際に使うドメイン（VPSのIPにDNSを向けたもの）に変更してください。
+# Caddy がこのドメイン宛に Let's Encrypt 証明書を自動取得・更新します（手動のSSL作業は不要）。
+#
+# ※ DNS（Aレコード）を VPS のグローバルIP に向けてから docker compose up すること。
+#   向いていないと証明書取得に失敗します。
+
+invoice.rope-lab.jp {
+    encode gzip
+    reverse_proxy app:80
+}
+
+# 動作確認用にIP直アクセス/ドメイン未設定で試すなら、上をコメントアウトして下を有効化（HTTPのみ・証明書なし）
+# :80 {
+#     reverse_proxy app:80
+# }

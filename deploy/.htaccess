@@ -1,0 +1,2 @@
+# デプロイ用設定ディレクトリ。Webからのアクセスは禁止。
+Require all denied

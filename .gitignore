@@ -12,3 +12,4 @@ composer.lock
 **/quote_counter.json
 **/receipt_log.json
 **/estimate_counter.json
+**/.env
