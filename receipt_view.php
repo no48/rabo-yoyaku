@@ -270,7 +270,7 @@ table.items td.num { text-align:right; }
 .print-bar { position:sticky; top:0; background:#1f2937; color:white; padding:10px 14px; margin-bottom:16px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
 .print-bar a, .print-bar button { background:white; color:#1f2937; border:0; padding:6px 14px; border-radius:4px; cursor:pointer; font-size:0.9rem; font-weight:600; text-decoration:none; }
 .print-bar a { background:#6b7280; color:white; }
-[contenteditable="true"] { cursor:text; transition:background .15s, outline-color .15s; outline:1px dashed transparent; outline-offset:4px; border-radius:2px; }
+[contenteditable="true"] { cursor:text; background:#fff8d4; transition:background .15s, outline-color .15s; outline:1px dashed transparent; outline-offset:4px; border-radius:2px; }
 [contenteditable="true"]:hover { background:#fff8d4; outline-color:#d4a200; }
 [contenteditable="true"]:focus { background:#fffbe8; outline:2px dashed #d4a200; }
 @media print {
