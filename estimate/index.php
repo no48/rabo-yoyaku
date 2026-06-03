@@ -61,9 +61,9 @@ table.items { width:100%; border-collapse:collapse; margin:12px 0; font-size:9.5
 table.items th, table.items td { border-bottom:1px solid #ccc; padding:6px 8px; text-align:left; vertical-align:middle; }
 table.items th { background:#f4f4f4; }
 table.items td.num, table.items th.num { text-align:right; }
-table.items input { border:0; border-bottom:1px dashed #cbd5e1; background:transparent; font:inherit; width:100%; padding:2px 0; }
+table.items input { border:0; border-bottom:1px dashed #cbd5e1; background:#fff8d4; font:inherit; width:100%; padding:2px 0; }
 table.items input.num { text-align:right; }
-table.items input:focus { outline:0; border-bottom:1px solid #2563eb; background:#f8fafc; }
+table.items input:focus { outline:0; border-bottom:1px solid #2563eb; background:#fffbe8; }
 .row-del { width:30px; text-align:center; }
 .btn-del { border:1px solid #fca5a5; background:#fff; color:#dc2626; width:22px; height:22px; border-radius:50%; cursor:pointer; font-weight:700; line-height:1; }
 .totals { width:280px; margin-left:auto; font-size:9.5pt; margin-top:8px; }
@@ -73,7 +73,8 @@ table.items input:focus { outline:0; border-bottom:1px solid #2563eb; background
 .note-text { white-space:pre-wrap; font-size:9.5pt; line-height:1.7; min-height:3em; padding:6px 8px; background:#fafafa; border:1px solid #eee; border-radius:3px; margin-top:6px; }
 .staff { margin-top:10px; font-size:10pt; text-align:right; }
 .footer-note { margin-top:24px; font-size:9pt; color:#555; line-height:1.7; border-top:1px solid #ccc; padding-top:10px; }
-[contenteditable]:focus { outline:1px solid #2563eb; background:#f8fafc; }
+[contenteditable="true"] { background:#fff8d4; border-radius:2px; }
+[contenteditable]:focus { outline:1px solid #2563eb; background:#fffbe8; }
 
 .modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.4); display:none; align-items:center; justify-content:center; z-index:50; }
 .modal-bg.shown { display:flex; }
@@ -94,7 +95,8 @@ table.items input:focus { outline:0; border-bottom:1px solid #2563eb; background
   body { background:#fff; padding:0; }
   .no-print { display:none !important; }
   .sheet { box-shadow:none; width:auto; min-height:auto; padding:0; margin:0; }
-  table.items input { border-bottom:0; }
+  table.items input { border-bottom:0; background:transparent !important; }
+  [contenteditable] { background:transparent !important; }
 }
 </style>
 </head>
